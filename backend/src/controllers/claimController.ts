@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Claim from '../models/Claim';
 import { classifyClaim } from '../services/aiService';
 import { asyncHandler, createError } from '../middleware/errorHandler';
@@ -39,6 +40,10 @@ type IClaimDocument = IClaim & { _id: string };
 
 export const getClaimById = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw createError('Invalid claim ID format', 400);
+  }
 
   const claim = await Claim.findById(id);
 

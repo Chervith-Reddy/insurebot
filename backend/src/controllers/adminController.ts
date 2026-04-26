@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Claim from '../models/Claim';
 import { sendStatusUpdateEmail } from '../services/emailService';
 import { getAnalyticsData, getMonthlyTrends } from '../services/analyticsService';
@@ -8,6 +9,10 @@ import { ApiResponse, ClaimStatus, IClaim } from '../types';
 export const updateClaimStatus = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
   const { status, note } = req.body as { status: ClaimStatus; note?: string };
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw createError('Invalid claim ID format', 400);
+  }
 
   const claim = await Claim.findById(id);
 
@@ -64,6 +69,10 @@ export const getAnalytics = asyncHandler(async (req: Request, res: Response): Pr
 
 export const deleteClaim = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    throw createError('Invalid claim ID format', 400);
+  }
 
   const claim = await Claim.findById(id);
 

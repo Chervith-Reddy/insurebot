@@ -23,15 +23,16 @@ router.post('/', validateClaim, handleValidationErrors, submitClaim);
 router.get('/', getAllClaims);
 
 /**
+ * GET /api/claims/policy/:policyNumber
+ * Get all claims for a policy number
+ * MUST be before /:id to avoid 'policy' matching as an ID
+ */
+router.get('/policy/:policyNumber', getClaimByPolicyNumber);
+
+/**
  * GET /api/claims/:id
  * Get a specific claim by MongoDB ID
  */
 router.get('/:id', getClaimById);
-
-/**
- * GET /api/claims/policy/:policyNumber
- * Get all claims for a policy number
- */
-router.get('/policy/:policyNumber', getClaimByPolicyNumber);
 
 export default router;

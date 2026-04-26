@@ -66,7 +66,6 @@ const AdminDashboard: React.FC = () => {
 
   const handleFilterChange = () => {
     setCurrentPage(1);
-    fetchData();
   };
 
   const statCards = [
