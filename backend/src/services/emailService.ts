@@ -7,46 +7,47 @@ interface EmailOptions {
   html: string;
 }
 
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    tls: {
-      rejectUnauthorized: false,
-    },
-  });
-};
+export class EmailService {
+  private static createTransporter() {
+    return nodemailer.createTransport({
+      host: process.env.SMTP_HOST || 'smtp.gmail.com',
+      port: parseInt(process.env.SMTP_PORT || '587'),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: {
+        rejectUnauthorized: false,
+      },
+    });
+  }
 
-const getStatusColor = (status: ClaimStatus): string => {
-  const colors: Record<ClaimStatus, string> = {
-    Pending: '#f59e0b',
-    'Under Review': '#3b82f6',
-    Approved: '#10b981',
-    Rejected: '#ef4444',
-  };
-  return colors[status];
-};
+  private static getStatusColor(status: ClaimStatus): string {
+    const colors: Record<ClaimStatus, string> = {
+      Pending: '#f59e0b',
+      'Under Review': '#3b82f6',
+      Approved: '#10b981',
+      Rejected: '#ef4444',
+    };
+    return colors[status];
+  }
 
-const getStatusMessage = (status: ClaimStatus): string => {
-  const messages: Record<ClaimStatus, string> = {
-    Pending: 'Your claim has been received and is pending review.',
-    'Under Review': 'Our team is actively reviewing your claim. We will update you soon.',
-    Approved: 'Congratulations! Your insurance claim has been approved. Our team will contact you regarding the next steps.',
-    Rejected: 'We regret to inform you that your claim has been rejected. Please contact our support team for more information.',
-  };
-  return messages[status];
-};
+  private static getStatusMessage(status: ClaimStatus): string {
+    const messages: Record<ClaimStatus, string> = {
+      Pending: 'Your claim has been received and is pending review.',
+      'Under Review': 'Our team is actively reviewing your claim. We will update you soon.',
+      Approved: 'Congratulations! Your insurance claim has been approved. Our team will contact you regarding the next steps.',
+      Rejected: 'We regret to inform you that your claim has been rejected. Please contact our support team for more information.',
+    };
+    return messages[status];
+  }
 
-const buildEmailTemplate = (claim: IClaim, newStatus: ClaimStatus, note?: string): string => {
-  const statusColor = getStatusColor(newStatus);
-  const statusMessage = getStatusMessage(newStatus);
+  private static buildEmailTemplate(claim: IClaim, newStatus: ClaimStatus, note?: string): string {
+    const statusColor = EmailService.getStatusColor(newStatus);
+    const statusMessage = EmailService.getStatusMessage(newStatus);
 
-  return `
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -113,50 +114,51 @@ const buildEmailTemplate = (claim: IClaim, newStatus: ClaimStatus, note?: string
   </div>
 </body>
 </html>
-  `;
-};
-
-export const sendStatusUpdateEmail = async (
-  claim: IClaim,
-  newStatus: ClaimStatus,
-  note?: string
-): Promise<void> => {
-  const smtpUser = process.env.SMTP_USER;
-  const smtpPass = process.env.SMTP_PASS;
-
-  if (!smtpUser || !smtpPass || smtpUser === 'your_email@gmail.com') {
-    console.warn('Email service not configured. Skipping email notification.');
-    console.log(`[EMAIL MOCK] Would send status update email to ${claim.claimerEmail}: ${newStatus}`);
-    return;
+    `;
   }
 
-  const transporter = createTransporter();
+  static async sendStatusUpdateEmail(
+    claim: IClaim,
+    newStatus: ClaimStatus,
+    note?: string
+  ): Promise<void> {
+    const smtpUser = process.env.SMTP_USER;
+    const smtpPass = process.env.SMTP_PASS;
 
-  const emailOptions: EmailOptions = {
-    to: claim.claimerEmail,
-    subject: `InsureBot — Your Claim Status: ${newStatus} | Policy ${claim.policyNumber}`,
-    html: buildEmailTemplate(claim, newStatus, note),
-  };
+    if (!smtpUser || !smtpPass || smtpUser === 'your_email@gmail.com') {
+      console.warn('Email service not configured. Skipping email notification.');
+      console.log(`[EMAIL MOCK] Would send status update email to ${claim.claimerEmail}: ${newStatus}`);
+      return;
+    }
 
-  try {
-    await transporter.verify();
-    await transporter.sendMail({
-      from: `"InsureBot 🛡️" <${smtpUser}>`,
-      ...emailOptions,
-    });
+    const transporter = EmailService.createTransporter();
 
-    console.log(`Email sent successfully to ${claim.claimerEmail} — Status: ${newStatus}`);
+    const emailOptions: EmailOptions = {
+      to: claim.claimerEmail,
+      subject: `InsureBot — Your Claim Status: ${newStatus} | Policy ${claim.policyNumber}`,
+      html: EmailService.buildEmailTemplate(claim, newStatus, note),
+    };
 
-    const adminEmail = process.env.ADMIN_EMAIL;
-    if (adminEmail) {
+    try {
+      await transporter.verify();
       await transporter.sendMail({
         from: `"InsureBot 🛡️" <${smtpUser}>`,
-        to: adminEmail,
-        subject: `[ADMIN] Claim Status Updated: ${newStatus} | Policy ${claim.policyNumber}`,
-        html: buildEmailTemplate(claim, newStatus, note),
+        ...emailOptions,
       });
+
+      console.log(`Email sent successfully to ${claim.claimerEmail} — Status: ${newStatus}`);
+
+      const adminEmail = process.env.ADMIN_EMAIL;
+      if (adminEmail) {
+        await transporter.sendMail({
+          from: `"InsureBot 🛡️" <${smtpUser}>`,
+          to: adminEmail,
+          subject: `[ADMIN] Claim Status Updated: ${newStatus} | Policy ${claim.policyNumber}`,
+          html: EmailService.buildEmailTemplate(claim, newStatus, note),
+        });
+      }
+    } catch (error) {
+      console.error('Failed to send email:', error);
     }
-  } catch (error) {
-    console.error('Failed to send email:', error);
   }
-};
+}

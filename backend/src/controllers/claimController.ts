@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Claim from '../models/Claim';
-import { classifyClaim } from '../services/aiService';
+import { AIService } from '../services/aiService';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { ApiResponse, IClaim, IncidentType } from '../types';
 
 export const submitClaim = asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const { policyNumber, incidentType, description, amount, claimerEmail, claimerName } = req.body;
 
-  const aiResult = await classifyClaim(incidentType as IncidentType, description);
+  const aiResult = await AIService.classifyClaim(incidentType as IncidentType, description);
 
   const claim = new Claim({
     policyNumber: policyNumber.toUpperCase(),

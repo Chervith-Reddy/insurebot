@@ -1,8 +1,8 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import Claim from '../models/Claim';
-import { sendStatusUpdateEmail } from '../services/emailService';
-import { getAnalyticsData, getMonthlyTrends } from '../services/analyticsService';
+import { EmailService } from '../services/emailService';
+import { AnalyticsService } from '../services/analyticsService';
 import { asyncHandler, createError } from '../middleware/errorHandler';
 import { ApiResponse, ClaimStatus, IClaim } from '../types';
 
@@ -41,7 +41,7 @@ export const updateClaimStatus = asyncHandler(async (req: Request, res: Response
 
   await claim.save();
 
-  await sendStatusUpdateEmail(claim.toJSON() as unknown as IClaim, status, note);
+  await EmailService.sendStatusUpdateEmail(claim.toJSON() as unknown as IClaim, status, note);
 
   const response: ApiResponse<IClaim> = {
     success: true,
@@ -53,8 +53,8 @@ export const updateClaimStatus = asyncHandler(async (req: Request, res: Response
 });
 
 export const getAnalytics = asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const analytics = await getAnalyticsData();
-  const trends = await getMonthlyTrends();
+  const analytics = await AnalyticsService.getAnalyticsData();
+  const trends = await AnalyticsService.getMonthlyTrends();
 
   const response = {
     success: true,
